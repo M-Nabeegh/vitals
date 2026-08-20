@@ -54,6 +54,9 @@ struct Snapshot: Decodable, Equatable {
 
     struct Disk: Decodable, Equatable, Identifiable {
         var device = ""
+        /// The physical disk this filesystem lives on, resolved by the agent so
+        /// LVM and dm-crypt volumes still match a SMART report.
+        var parent: String?
         var mount = ""
         var fstype = ""
         var total: Int64 = 0
@@ -65,6 +68,7 @@ struct Snapshot: Decodable, Equatable {
         /// `/dev/sda1` and `/dev/nvme0n1p2` both belong to a physical device
         /// that SMART reports under its bare name.
         var physicalDevice: String {
+            if let parent, !parent.isEmpty { return parent }
             var name = device.replacingOccurrences(of: "/dev/", with: "")
             while let last = name.last, last.isNumber { name.removeLast() }
             if name.hasSuffix("p") { name.removeLast() }

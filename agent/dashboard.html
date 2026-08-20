@@ -303,7 +303,10 @@ function render(d){
   const smartBy = {};
   (d.smart || []).forEach(s => { smartBy[s.device] = s; });
   $("disks").innerHTML = (d.disks || []).map(disk => {
-    const base = (disk.device || "").replace("/dev/", "").replace(/\d+$/, "").replace(/p$/, "");
+    // The agent resolves LVM and dm-crypt back to a real disk; fall back to
+    // trimming the partition number for plain devices.
+    const base = disk.parent
+      || (disk.device || "").replace("/dev/", "").replace(/\d+$/, "").replace(/p$/, "");
     const s = smartBy[base];
     const sev = severity(disk.percent, 80, 92);
     let smart = "";

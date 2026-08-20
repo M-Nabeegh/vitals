@@ -124,6 +124,10 @@ The rule allows `smartctl -H -A` on disk devices only. Neither flag can write to
 a disk, change settings, or start a self-test. Skip it and everything else still
 works; the disk cards just say SMART is unavailable.
 
+Filesystems on LVM or dm-crypt are resolved back to the physical disk by walking
+the device-mapper slaves in sysfs, so an encrypted or LVM root still reports the
+health of the drive underneath it.
+
 ## The iPhone app
 
 `ios/` is a native SwiftUI client. Open `ios/Vitals.xcodeproj`, set your own

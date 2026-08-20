@@ -177,6 +177,51 @@ class NetReader:
         return interfaces[:4]
 
 
+def parent_disk(device: str) -> str:
+    """
+    Resolve a filesystem's device back to the physical disk SMART knows about.
+
+    `/dev/sda1` is just `sda`, but anything on LVM or dm-crypt appears as
+    `/dev/mapper/...`, which no drive is called. Those resolve by walking the
+    device-mapper slaves in sysfs until a real block device turns up.
+    """
+    name = device.replace("/dev/", "")
+
+    if name.startswith(("mapper/", "dm-")):
+        if name.startswith("mapper/"):
+            try:
+                name = os.path.basename(os.readlink(device))
+            except OSError:
+                return ""
+        seen = set()
+        queue = [name]
+        while queue:  # a stack of mappers can sit on top of another mapper
+            current = queue.pop(0)
+            if current in seen:
+                continue
+            seen.add(current)
+            slaves = f"/sys/block/{current}/slaves"
+            try:
+                children = os.listdir(slaves)
+            except OSError:
+                continue
+            for child in children:
+                if child.startswith("dm-"):
+                    queue.append(child)
+                else:
+                    name = child
+                    queue = []
+                    break
+        if name.startswith("dm-"):
+            return ""
+
+    while name and name[-1].isdigit():
+        name = name[:-1]
+    if name.endswith("p"):  # nvme0n1p2 -> nvme0n1
+        name = name[:-1]
+    return name
+
+
 def read_disks() -> list[dict]:
     """Real filesystems only. Nobody wants to monitor a snap loopback."""
     disks, seen = [], set()
@@ -201,6 +246,7 @@ def read_disks() -> list[dict]:
         used = total - stats.f_bfree * stats.f_frsize
         disks.append({
             "device": device,
+            "parent": parent_disk(device),
             "mount": mount,
             "fstype": fstype,
             "total": total, "used": used, "free": free,
