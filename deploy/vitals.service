@@ -1,0 +1,31 @@
+# Always-resident agent. It costs about 23 MB and 0% CPU while nobody is
+# watching, because the collector only runs while a browser holds the stream
+# open. If you want the process itself gone when idle, use the socket-activated
+# pair instead (vitals-socket.socket + vitals-socket.service).
+[Unit]
+Description=Vitals server dashboard
+Documentation=https://github.com/M-Nabeegh/vitals
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+SupplementaryGroups=docker
+WorkingDirectory=/opt/vitals
+ExecStart=/usr/bin/python3 -u /opt/vitals/vitals.py --port 8321
+Restart=on-failure
+RestartSec=5
+
+# It only ever reads. Nothing here needs write access to the filesystem.
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=no
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=192M
+
+[Install]
+WantedBy=multi-user.target

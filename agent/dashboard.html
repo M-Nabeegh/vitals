@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080d10">
+<title>Vitals</title>
+<style>
+:root{
+  --ground:#f1ece1; --card:#faf7f0; --raised:#ece6d9; --hairline:rgba(20,34,42,.11);
+  --fg:#15222a; --fg-2:#3d4e56; --mute:#6b7a80;
+  --accent:#0c6e77; --warm:#a55f05; --rose:#a63c60; --ok:#2f7d4f;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --r:20px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#080d10; --card:#111a1e; --raised:#18242a; --hairline:rgba(227,237,239,.10);
+    --fg:#e3edef; --fg-2:#b4c7cb; --mute:#7c959b;
+    --accent:#5fd6d2; --warm:#f0a93e; --rose:#e4779a; --ok:#5fd6a0;
+  }
+}
+:root[data-theme="dark"]{
+    --ground:#080d10; --card:#111a1e; --raised:#18242a; --hairline:rgba(227,237,239,.10);
+    --fg:#e3edef; --fg-2:#b4c7cb; --mute:#7c959b;
+    --accent:#5fd6d2; --warm:#f0a93e; --rose:#e4779a; --ok:#5fd6a0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground); color:var(--fg); font-family:var(--sans);
+  font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding:0 16px calc(40px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:1080px;margin:0 auto}
+
+/* ── header ─────────────────────────────────────────── */
+header{padding:26px 0 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.02em}
+.host{font-family:var(--mono);font-size:12px;color:var(--mute);margin-top:4px;letter-spacing:.02em}
+.live{
+  display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--mute);
+  border:1px solid var(--hairline);border-radius:999px;padding:7px 13px;background:var(--card);
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--mute);flex:none}
+.live[data-state="live"] .dot{background:var(--accent);animation:pulse 2s ease-in-out infinite}
+.live[data-state="paused"] .dot{background:var(--warm)}
+.live[data-state="down"] .dot{background:var(--rose)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.live .dot{animation:none}}
+
+/* ── shared ─────────────────────────────────────────── */
+.label{
+  font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--mute);margin:26px 0 10px;
+}
+.card{background:var(--card);border:1px solid var(--hairline);border-radius:var(--r);padding:16px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:760px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.g2{grid-template-columns:1fr}}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em}
+
+/* ── stat tiles ─────────────────────────────────────── */
+.tile .k{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.tile .v{margin-top:7px;font-size:27px;display:flex;align-items:baseline;gap:4px}
+.tile .u{font-size:13px;color:var(--mute);font-weight:500}
+.tile .sub{margin-top:5px;font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+.bar{height:3px;border-radius:999px;background:var(--hairline);margin-top:11px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .5s ease-out}
+.bar i.warn{background:var(--warm)} .bar i.crit{background:var(--rose)}
+
+/* ── sparkline ──────────────────────────────────────── */
+.spark{display:block;width:100%;height:34px;margin-top:10px}
+
+/* ── alerts ─────────────────────────────────────────── */
+#alerts{display:grid;gap:8px}
+.alert{
+  display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:14px;
+  border:1px solid var(--hairline);background:var(--card);
+}
+.alert .sev{width:3px;align-self:stretch;border-radius:999px;flex:none}
+.alert.critical .sev{background:var(--rose)} .alert.warning .sev{background:var(--warm)}
+.alert .who{font-weight:600;font-size:14.5px}
+.alert .what{color:var(--mute);font-size:13.5px;margin-left:auto;text-align:right}
+.clear{
+  display:flex;align-items:center;gap:9px;color:var(--mute);font-size:14px;
+  padding:13px 15px;border:1px solid var(--hairline);border-radius:14px;background:var(--card);
+}
+.clear b{color:var(--ok);font-weight:600}
+
+/* ── containers ─────────────────────────────────────── */
+#containers{display:grid;gap:8px}
+.ct{
+  display:grid;grid-template-columns:9px minmax(0,1.4fr) minmax(0,1fr) 74px 92px;
+  gap:12px;align-items:center;padding:12px 14px;
+  background:var(--card);border:1px solid var(--hairline);border-radius:14px;
+}
+.ct .state{width:9px;height:9px;border-radius:50%;background:var(--mute)}
+.ct.running .state{background:var(--accent)}
+.ct.healthy .state{background:var(--ok)}
+.ct.unhealthy .state{background:var(--rose)}
+.ct.restarting .state{background:var(--warm)}
+.ct.exited .state{background:var(--mute);opacity:.5}
+.ct .nm{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct .im{font-family:var(--mono);font-size:11.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct .st{font-family:var(--mono);font-size:12px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct .metric{font-family:var(--mono);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;color:var(--fg-2)}
+@media(max-width:700px){
+  .ct{grid-template-columns:9px minmax(0,1fr) 66px 74px;}
+  .ct .st{display:none}
+}
+.chip{
+  display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
+  padding:2px 7px;border-radius:999px;background:var(--raised);color:var(--mute);margin-left:7px;
+  vertical-align:middle;
+}
+.chip.bad{color:var(--rose)} .chip.good{color:var(--ok)} .chip.warn{color:var(--warm)}
+
+/* ── disks ──────────────────────────────────────────── */
+.disk .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.disk .mount{font-weight:600;font-size:15px;font-family:var(--mono)}
+.disk .pct{font-family:var(--mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.disk .meta{margin-top:4px;font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+.disk .smart{
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--hairline);
+  display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--mute);
+}
+.disk .smart b{color:var(--fg-2);font-weight:600}
+.disk .smart .bad{color:var(--rose)}
+
+/* ── footer ─────────────────────────────────────────── */
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--hairline);
+  color:var(--mute);font-size:12.5px;line-height:1.7}
+footer code{font-family:var(--mono);font-size:11.5px;background:var(--raised);padding:1px 6px;border-radius:5px}
+.skeleton{opacity:.4}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1 id="hostname">Vitals</h1>
+    <div class="host" id="hostmeta">connecting…</div>
+  </div>
+  <div class="live" id="live" data-state="down"><span class="dot"></span><span id="livetext">offline</span></div>
+</header>
+
+<div id="alertwrap" hidden>
+  <div class="label" style="margin-top:6px">Needs attention</div>
+  <div id="alerts"></div>
+</div>
+
+<div class="label">System</div>
+<div class="grid g4" id="tiles">
+  <div class="card tile skeleton"><div class="k">CPU</div><div class="v"><span class="num">—</span></div></div>
+  <div class="card tile skeleton"><div class="k">Memory</div><div class="v"><span class="num">—</span></div></div>
+  <div class="card tile skeleton"><div class="k">Temperature</div><div class="v"><span class="num">—</span></div></div>
+  <div class="card tile skeleton"><div class="k">Network</div><div class="v"><span class="num">—</span></div></div>
+</div>
+
+<div class="label">Storage</div>
+<div class="grid g2" id="disks"></div>
+
+<div class="label">Containers <span id="ctcount" class="chip"></span></div>
+<div id="containers"></div>
+
+<footer>
+  <p><b>This page is the switch.</b> The agent samples nothing until a browser opens
+  the stream, and stops the moment the last one leaves. Switch tabs and it pauses;
+  come back and it resumes.</p>
+  <p id="agentline"></p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+const HISTORY = 60;            // ~2 minutes of 2s samples
+const series = { cpu: [], mem: [], net: [] };
+let source = null, lastAt = 0, sampleCount = 0;
+
+const $ = id => document.getElementById(id);
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+function bytes(n){
+  if (!n && n !== 0) return "—";
+  const u = ["B","KB","MB","GB","TB"];
+  let i = 0; while (n >= 1024 && i < u.length - 1){ n /= 1024; i++; }
+  return (n < 10 && i > 0 ? n.toFixed(1) : Math.round(n)) + " " + u[i];
+}
+function rate(n){
+  if (!n) return "0";
+  const u = ["B","KB","MB","GB"];
+  let i = 0; while (n >= 1024 && i < u.length - 1){ n /= 1024; i++; }
+  return (n < 10 && i > 0 ? n.toFixed(1) : Math.round(n)) + " " + u[i] + "/s";
+}
+function duration(sec){
+  sec = Math.floor(sec || 0);
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+function severity(pct, warn, crit){ return pct >= crit ? "crit" : pct >= warn ? "warn" : ""; }
+
+/* Sparkline drawn as an inline SVG path: an area fill under a stroked line,
+   with the newest point emphasised so the eye lands on "now". */
+function spark(values, tint, fixedMax){
+  const w = 240, h = 34, n = values.length;
+  if (n < 2) return `<svg class="spark" viewBox="0 0 ${w} ${h}"></svg>`;
+  // Percentages scale against their real ceiling, otherwise a flat line always
+  // pins to the top of the box and the fill reads as "maxed out".
+  const max = fixedMax || Math.max(1, ...values);
+  const pt = i => [ i / (n - 1) * w, h - (values[i] / max) * (h - 4) - 2 ];
+  const line = values.map((_, i) => pt(i).map(v => v.toFixed(1)).join(" ")).join(" L ");
+  const [lx, ly] = pt(n - 1);
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M ${line} L ${w} ${h} L 0 ${h} Z" fill="${tint}" opacity=".13"/>
+    <path d="M ${line}" fill="none" stroke="${tint}" stroke-width="1.6"
+          stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.2" fill="${tint}"/>
+  </svg>`;
+}
+
+function push(key, value){
+  const arr = series[key];
+  arr.push(value);
+  if (arr.length > HISTORY) arr.shift();
+}
+
+function tile(k, value, unit, sub, pct, warn, crit, sparkKey, tint, sparkMax){
+  const sev = pct === null ? "" : severity(pct, warn, crit);
+  return `<div class="card tile">
+    <div class="k">${k}</div>
+    <div class="v"><span class="num">${value}</span>${unit ? `<span class="u">${unit}</span>` : ""}</div>
+    ${sub ? `<div class="sub">${sub}</div>` : ""}
+    ${pct !== null ? `<div class="bar"><i class="${sev}" style="width:${clamp(pct,0,100)}%"></i></div>` : ""}
+    ${sparkKey ? spark(series[sparkKey], tint, sparkMax) : ""}
+  </div>`;
+}
+
+function accent(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function render(d){
+  if (d.error){ return; }
+  lastAt = d.at; sampleCount++;
+
+  const A = accent("--accent"), W = accent("--warm");
+
+  /* header */
+  $("hostname").textContent = d.host.hostname || "Vitals";
+  $("hostmeta").textContent =
+    `${d.host.os} · ${d.host.kernel} · up ${duration(d.host.uptime)}`;
+
+  /* series */
+  push("cpu", d.cpu.percent || 0);
+  push("mem", d.memory.percent || 0);
+  const net = d.network[0] || { rx_rate: 0, tx_rate: 0 };
+  push("net", (net.rx_rate + net.tx_rate) / 1024);
+
+  /* tiles */
+  const load = (d.cpu.load || []).map(v => v.toFixed(2)).join("  ");
+  const temp = d.cpu.temp;
+  $("tiles").innerHTML =
+    tile("CPU", (d.cpu.percent ?? 0).toFixed(0), "%",
+         `load ${load} · ${d.cpu.count} cores`, d.cpu.percent, 70, 90, "cpu", A, 100) +
+    tile("Memory", bytes(d.memory.used).split(" ")[0],
+         bytes(d.memory.used).split(" ")[1],
+         `of ${bytes(d.memory.total)} · ${d.memory.percent.toFixed(0)}% used`,
+         d.memory.percent, 85, 95, "mem", A, 100) +
+    tile("Temperature", temp === null || temp === undefined ? "—" : temp.toFixed(0),
+         temp === null || temp === undefined ? "" : "°C",
+         d.memory.swap.total ? `swap ${d.memory.swap.percent.toFixed(0)}%` : "no swap",
+         temp === null || temp === undefined ? null : clamp(temp, 0, 100), 75, 88, null, A) +
+    tile("Network", rate(net.rx_rate + net.tx_rate).split(" ")[0],
+         rate(net.rx_rate + net.tx_rate).split(" ")[1],
+         `${net.name || "—"} · ↓${rate(net.rx_rate)} ↑${rate(net.tx_rate)}`,
+         null, 0, 0, "net", W);
+
+  /* alerts */
+  const alerts = d.alerts || [];
+  $("alertwrap").hidden = false;
+  $("alerts").innerHTML = alerts.length
+    ? alerts.map(a => `<div class="alert ${a.level}">
+        <span class="sev"></span>
+        <span class="who">${esc(a.subject)}</span>
+        <span class="what">${esc(a.message)}</span>
+      </div>`).join("")
+    : `<div class="clear"><b>All clear.</b> ${d.containers.length} containers,
+        ${d.disks.length} filesystems, nothing needs you.</div>`;
+
+  /* disks */
+  const smartBy = {};
+  (d.smart || []).forEach(s => { smartBy[s.device] = s; });
+  $("disks").innerHTML = (d.disks || []).map(disk => {
+    const base = (disk.device || "").replace("/dev/", "").replace(/\d+$/, "").replace(/p$/, "");
+    const s = smartBy[base];
+    const sev = severity(disk.percent, 80, 92);
+    let smart = "";
+    if (s && s.available){
+      const bits = [];
+      if (s.health) bits.push(`<span class="${/pass|ok/i.test(s.health) ? "" : "bad"}">${esc(s.health)}</span>`);
+      if (s.temp != null) bits.push(`<b>${s.temp}°C</b>`);
+      if (s.hours != null) bits.push(`<b>${Math.round(s.hours/8760*10)/10}y</b> powered`);
+      if (s.reallocated != null) bits.push(`realloc <span class="${s.reallocated ? "bad" : ""}"><b>${s.reallocated}</b></span>`);
+      if (s.pending != null) bits.push(`pending <span class="${s.pending ? "bad" : ""}"><b>${s.pending}</b></span>`);
+      smart = `<div class="smart">${bits.join("")}</div>`;
+    } else if (s){
+      smart = `<div class="smart">SMART unavailable, needs the sudoers rule</div>`;
+    }
+    return `<div class="card disk">
+      <div class="top">
+        <span class="mount">${esc(disk.mount)}</span>
+        <span class="pct">${disk.percent.toFixed(0)}%</span>
+      </div>
+      <div class="meta">${bytes(disk.used)} of ${bytes(disk.total)} · ${bytes(disk.free)} free · ${esc(disk.fstype)}</div>
+      <div class="bar"><i class="${sev}" style="width:${clamp(disk.percent,0,100)}%"></i></div>
+      ${smart}
+    </div>`;
+  }).join("");
+
+  /* containers */
+  const cs = d.containers || [];
+  const up = cs.filter(c => c.state === "running").length;
+  $("ctcount").textContent = `${up} of ${cs.length} up`;
+  $("containers").innerHTML = cs.map(c => {
+    const cls = [c.state, c.health === "healthy" ? "healthy" : "",
+                 c.health === "unhealthy" ? "unhealthy" : ""].filter(Boolean).join(" ");
+    let chip = "";
+    if (c.health === "unhealthy") chip = `<span class="chip bad">unhealthy</span>`;
+    else if (c.health === "starting") chip = `<span class="chip warn">starting</span>`;
+    else if (c.state !== "running") chip = `<span class="chip">${esc(c.state)}</span>`;
+    return `<div class="ct ${cls}">
+      <span class="state"></span>
+      <div>
+        <div class="nm">${esc(c.name)}${chip}</div>
+        <div class="im">${esc(c.image)}</div>
+      </div>
+      <div class="st">${esc(c.status)}</div>
+      <div class="metric">${c.state === "running" ? c.cpu.toFixed(1) + "%" : "—"}</div>
+      <div class="metric">${c.state === "running" ? bytes(c.mem) : "—"}</div>
+    </div>`;
+  }).join("");
+
+  const a = d.agent || {};
+  $("agentline").innerHTML =
+    `Agent: ${a.viewers} viewer${a.viewers === 1 ? "" : "s"} · ${a.samples} samples this session ·
+     woke ${a.wakes}× · ${a.docker ? "Docker connected" : "<b>no Docker socket</b>"} ·
+     sampling every 2s, disks and SMART every 60s`;
+}
+
+function esc(s){
+  return String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+}
+
+function setState(state, text){
+  const el = $("live");
+  el.dataset.state = state;
+  $("livetext").textContent = text;
+}
+
+/* ── the connection is the switch ──────────────────────
+   Opening it starts collection on the server. Closing it stops collection
+   entirely. A hidden tab is not watching, so it disconnects too: leaving this
+   parked in a background tab should cost the server nothing.            */
+
+/* One-shot mode. Renders a single frame from /api/snapshot and never opens the
+   stream, so the page reaches a settled state. Useful for screenshots, for
+   embedding in another status page, and for anyone who wants a look without
+   waking the collector at all. */
+function still(){
+  const token = new URLSearchParams(location.search).get("token");
+  fetch("/api/snapshot" + (token ? `?token=${encodeURIComponent(token)}` : ""))
+    .then(r => r.json())
+    .then(d => { render(d); setState("paused", "still"); })
+    .catch(() => setState("down", "unreachable"));
+}
+
+function connect(){
+  if (source) return;
+  const token = new URLSearchParams(location.search).get("token");
+  setState("down", "connecting");
+  source = new EventSource("/events" + (token ? `?token=${encodeURIComponent(token)}` : ""));
+  source.addEventListener("sample", e => {
+    setState("live", "live");
+    try { render(JSON.parse(e.data)); } catch (err) { console.error(err); }
+  });
+  source.onerror = () => {
+    if (document.hidden) return;
+    setState("down", "reconnecting");
+  };
+}
+
+function disconnect(reason){
+  if (!source) return;
+  source.close();
+  source = null;
+  setState("paused", reason);
+}
+
+const params = new URLSearchParams(location.search);
+
+/* ?theme=light|dark overrides the system setting. Handy for kiosks and wall
+   displays, where the room's lighting matters more than the OS preference. */
+const theme = params.get("theme");
+if (theme === "light" || theme === "dark"){
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+if (params.get("still") === "1"){
+  still();
+} else {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) disconnect("paused");
+    else connect();
+  });
+  window.addEventListener("pagehide", () => disconnect("paused"));
+  connect();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Socket-activated variant: the purest form of "nothing runs until I look".
+#
+# systemd holds port 8321. No Python process exists at all until the first
+# connection arrives, at which point systemd starts one and hands it the socket.
+# When the last viewer leaves, the agent exits after --idle-exit seconds and the
+# machine is back to zero processes, zero memory, zero CPU.
+[Unit]
+Description=Vitals server dashboard (socket activated)
+Requires=vitals-idle.socket
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+User=%i
+SupplementaryGroups=docker
+WorkingDirectory=/opt/vitals
+ExecStart=/usr/bin/python3 -u /opt/vitals/vitals.py --systemd-socket --idle-exit 90
+StandardInput=socket
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+MemoryMax=192M

@@ -1,0 +1,10 @@
+[Unit]
+Description=Vitals listening socket
+
+[Socket]
+ListenStream=8321
+# One process serves everyone rather than forking per connection.
+Accept=no
+
+[Install]
+WantedBy=sockets.target

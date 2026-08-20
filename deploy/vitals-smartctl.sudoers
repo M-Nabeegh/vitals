@@ -1,0 +1,8 @@
+# Vitals: read-only disk health, nothing else.
+# Install with:
+#   sudo install -m 0440 vitals-smartctl.sudoers /etc/sudoers.d/vitals-smartctl
+# Replace USERNAME with the account the agent runs as.
+#
+# -H is the health self-assessment, -A is the attribute table. Neither can
+# write to the disk, change settings, or start a self-test.
+USERNAME ALL=(root) NOPASSWD: /usr/sbin/smartctl -H -A /dev/sd[a-z], /usr/sbin/smartctl -H -A /dev/nvme[0-9]n[0-9]
