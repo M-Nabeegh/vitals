@@ -132,6 +132,7 @@ h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.02em}
 }
 .disk .smart b{color:var(--fg-2);font-weight:600}
 .disk .smart .bad{color:var(--rose)}
+.disk .smart b.bad{color:var(--rose)}
 
 /* ── footer ─────────────────────────────────────────── */
 footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--hairline);
@@ -308,11 +309,12 @@ function render(d){
     let smart = "";
     if (s && s.available){
       const bits = [];
+      // Each fact is its own element so the flex gap actually separates them.
       if (s.health) bits.push(`<span class="${/pass|ok/i.test(s.health) ? "" : "bad"}">${esc(s.health)}</span>`);
-      if (s.temp != null) bits.push(`<b>${s.temp}°C</b>`);
-      if (s.hours != null) bits.push(`<b>${Math.round(s.hours/8760*10)/10}y</b> powered`);
-      if (s.reallocated != null) bits.push(`realloc <span class="${s.reallocated ? "bad" : ""}"><b>${s.reallocated}</b></span>`);
-      if (s.pending != null) bits.push(`pending <span class="${s.pending ? "bad" : ""}"><b>${s.pending}</b></span>`);
+      if (s.temp != null) bits.push(`<span><b>${s.temp}°C</b></span>`);
+      if (s.hours != null) bits.push(`<span><b>${Math.round(s.hours/8760*10)/10}y</b> powered</span>`);
+      if (s.reallocated != null) bits.push(`<span>realloc <b class="${s.reallocated ? "bad" : ""}">${s.reallocated}</b></span>`);
+      if (s.pending != null) bits.push(`<span>pending <b class="${s.pending ? "bad" : ""}">${s.pending}</b></span>`);
       smart = `<div class="smart">${bits.join("")}</div>`;
     } else if (s){
       smart = `<div class="smart">SMART unavailable, needs the sudoers rule</div>`;

@@ -32,7 +32,7 @@ final class Client: ObservableObject {
     @Published private(set) var state: State = .idle
     @Published private(set) var history = History()
 
-    @AppStorage("serverURL") var serverURL: String = "http://192.168.68.95:8321"
+    @AppStorage("serverURL") var serverURL: String = ""
     @AppStorage("serverToken") var token: String = ""
 
     private var task: Task<Void, Never>?
@@ -64,6 +64,10 @@ final class Client: ObservableObject {
 
     func connect() {
         guard task == nil else { return }
+        guard !serverURL.trimmingCharacters(in: .whitespaces).isEmpty else {
+            state = .failed("Set your agent address in Settings")
+            return
+        }
         state = .connecting
         task = Task { [weak self] in await self?.stream() }
     }

@@ -469,6 +469,93 @@ def build_alerts(snapshot: dict) -> list[dict]:
     return alerts
 
 
+
+# ─────────────────────────────────────────────────────────────────────── demo
+
+def demo_snapshot(tick: int) -> dict:
+    """
+    A believable machine, invented. Lets anyone see the dashboard without owning
+    a server, and keeps real hostnames and container names out of screenshots.
+    """
+    import math
+    wave = lambda period, low, high, phase=0.0: (
+        low + (high - low) * (0.5 + 0.5 * math.sin(tick / period + phase)))
+
+    containers = [
+        ("media-jellyfin", "jellyfin/jellyfin:10.10.7", "healthy", 2.4, 512),
+        ("media-transmission", "linuxserver/transmission:latest", "healthy", 0.9, 96),
+        ("home-assistant", "ghcr.io/home-assistant/home-assistant:stable", None, 1.6, 368),
+        ("nextcloud", "nextcloud:29-apache", "healthy", 3.1, 604),
+        ("postgres", "postgres:16-alpine", "healthy", 0.4, 212),
+        ("redis", "redis:7-alpine", "healthy", 0.1, 24),
+        ("caddy", "caddy:2-alpine", None, 0.2, 48),
+        ("pihole", "pihole/pihole:latest", "healthy", 0.3, 88),
+        ("backup-agent", "restic/restic:latest", "unhealthy", 0.0, 16),
+        ("grafana", "grafana/grafana:11.2.0", None, 0.0, 0),
+    ]
+    built = []
+    for index, (name, image, health, cpu, mem) in enumerate(containers):
+        running = name != "grafana"
+        built.append({
+            "id": f"{index:012x}", "name": name, "image": image,
+            "state": "running" if running else "exited",
+            "health": health,
+            "status": (f"Up {6 + index} hours" + (f" ({health})" if health else ""))
+                      if running else "Exited (0) 3 days ago",
+            "cpu": round(cpu * wave(37, 0.4, 1.6, index), 2) if running else 0.0,
+            "mem": int(mem * 1024 * 1024 * wave(53, 0.9, 1.1, index)) if running else 0,
+            "mem_limit": 16 * 1024 ** 3, "mem_percent": 0.0,
+        })
+
+    disks = [
+        ("/dev/sda1", "/mnt/media", "ext4", 8 * 1024 ** 4, 0.71),
+        ("/dev/sdb1", "/mnt/backup", "ext4", 4 * 1024 ** 4, 0.88),
+        ("/dev/nvme0n1p2", "/", "ext4", 500 * 1024 ** 3, 0.34),
+    ]
+    built_disks = []
+    for device, mount, fstype, total, ratio in disks:
+        used = int(total * ratio)
+        built_disks.append({
+            "device": device, "mount": mount, "fstype": fstype,
+            "total": total, "used": used, "free": total - used,
+            "percent": round(100 * ratio, 1),
+        })
+
+    snapshot = {
+        "at": time.time(),
+        "host": {"hostname": "homelab", "os": "Debian GNU/Linux 12 (bookworm)",
+                 "kernel": "6.1.0-23-amd64", "uptime": 61 * 86400 + 14 * 3600},
+        "cpu": {"percent": round(wave(23, 4, 34), 1),
+                "cores": [round(wave(19, 2, 40, i)) for i in range(8)],
+                "count": 8,
+                "load": [round(wave(29, 0.2, 1.4), 2), 0.61, 0.48],
+                "temp": round(wave(41, 38, 52), 1)},
+        "memory": {"total": 32 * 1024 ** 3, "used": int(11.4 * 1024 ** 3),
+                   "available": int(20.6 * 1024 ** 3), "percent": 35.6,
+                   "cached": int(8.2 * 1024 ** 3),
+                   "swap": {"total": 8 * 1024 ** 3, "used": 0, "percent": 0.0}},
+        "network": [{"name": "enp3s0", "rx_bytes": 0, "tx_bytes": 0,
+                     "rx_rate": round(wave(13, 40_000, 2_400_000)),
+                     "tx_rate": round(wave(17, 20_000, 900_000))}],
+        "disks": built_disks,
+        "smart": [
+            {"device": "sda", "available": True, "model": "WDC WD80EFZZ",
+             "health": "PASSED", "temp": 38, "hours": 19_340,
+             "reallocated": 0, "pending": 0, "uncorrectable": 0, "rotational": True},
+            {"device": "sdb", "available": True, "model": "ST4000VN008",
+             "health": "PASSED", "temp": 41, "hours": 31_002,
+             "reallocated": 8, "pending": 0, "uncorrectable": 0, "rotational": True},
+            {"device": "nvme0n1", "available": True, "model": "Samsung SSD 980",
+             "health": "PASSED", "temp": 35, "hours": 9_120,
+             "reallocated": 0, "pending": 0, "uncorrectable": 0, "rotational": False},
+        ],
+        "containers": built,
+        "agent": {"viewers": 1, "samples": tick, "wakes": 1, "docker": True},
+    }
+    snapshot["alerts"] = build_alerts(snapshot)
+    return snapshot
+
+
 # ────────────────────────────────────────────────────────────────── the collector
 
 
@@ -491,6 +578,7 @@ class Collector:
         self.started_at = time.time()
         self.samples_taken = 0
         self.woke_count = 0
+        self.demo = False
 
     # -- subscriber bookkeeping
 
@@ -534,6 +622,9 @@ class Collector:
         return self._slow_cache
 
     def snapshot(self, force_slow: bool = False, standalone: bool = False) -> dict:
+        if self.demo:
+            return demo_snapshot(self.samples_taken)
+
         """
         `standalone` is for one-shot API calls made while the collector is
         asleep. Rates need two readings, and borrowing the shared counters would
@@ -783,9 +874,12 @@ def main() -> None:
                         help="serve on the socket systemd passed in")
     parser.add_argument("--idle-exit", type=float, default=0,
                         help="exit after N seconds with no viewers (0 disables)")
+    parser.add_argument("--demo", action="store_true",
+                        help="serve an invented machine; no real readings")
     arguments = parser.parse_args()
 
     Handler.collector = Collector()
+    Handler.collector.demo = arguments.demo
     Handler.token = arguments.token
 
     if arguments.systemd_socket:
@@ -803,7 +897,8 @@ def main() -> None:
         watch_for_idle(Handler.collector, arguments.idle_exit)
 
     guard = "token required" if arguments.token else "open, no token"
-    print(f"vitals on {where}  ({guard})")
+    mode = "  [demo data]" if arguments.demo else ""
+    print(f"vitals on {where}  ({guard}){mode}")
     print("idle until a browser connects; sampling stops when the last one leaves")
     try:
         server.serve_forever()

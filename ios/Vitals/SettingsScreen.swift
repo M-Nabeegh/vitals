@@ -10,7 +10,7 @@ struct SettingsScreen: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("http://192.168.68.95:8321", text: $draftURL)
+                    TextField("http://homelab.local:8321", text: $draftURL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
