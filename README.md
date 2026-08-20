@@ -4,17 +4,19 @@
 
 **A home server dashboard that only works when you are looking at it.**
 
-Nothing is sampled, stored, or written to disk until a browser opens the page.
-Close the tab and the collector stops dead.
+Nothing is sampled, stored, or written to disk until you open the app.
+Close it and the collector stops dead.
 
-Zero dependencies · One Python file · No database
+Native iPhone app · Zero-dependency agent · No database
 
 </div>
 
 ---
 
 <div align="center">
-<img src="screenshots/dashboard-dark.png" width="820" alt="Vitals dashboard">
+<img src="screenshots/ios-overview.png" width="270" alt="Overview">
+&nbsp;&nbsp;
+<img src="screenshots/ios-containers.png" width="270" alt="Containers">
 </div>
 
 ---
@@ -46,9 +48,10 @@ Measured on the machine in the screenshot, an i5-4590 running 13 containers:
 | One viewer | 0.59% | 3 | 23 MB |
 | Viewer closed the tab | 0.09% (teardown) | 1 | 23 MB |
 
-It even handles the case people forget: a **hidden tab is not watching**. The
-page listens for `visibilitychange` and drops the stream when you switch away,
-so a dashboard parked in a background tab costs the server nothing.
+It handles the case people forget, too. On iPhone the stream follows
+`scenePhase`, so an app sitting in the background is not watching and the agent
+goes quiet. In the browser the same job is done by `visibilitychange`, so a
+dashboard parked in a background tab costs the server nothing.
 
 ## What it shows
 
@@ -64,9 +67,22 @@ so a dashboard parked in a background tab costs the server nothing.
   health check, a container stuck restarting, a disk crossing a threshold, a
   drive reporting bad sectors
 
+### The iPhone app
+
+`ios/` holds a native SwiftUI client. Overview, containers with live search, and
+a settings tab for the agent address and token. Open it and the server starts
+sampling; background it and the server stops.
+
+Open `ios/Vitals.xcodeproj`, set your signing team, and run. iOS 17+.
+
+### The web dashboard
+
+The agent also serves a dashboard of its own at `/`, so any browser works with
+no install at all. Same design, same behaviour.
+
 <div align="center">
-<img src="screenshots/dashboard-light.png" width="410" alt="Light theme">
-<img src="screenshots/dashboard-mobile.png" width="180" alt="Mobile layout">
+<img src="screenshots/dashboard-dark.png" width="400" alt="Web dashboard, dark">
+<img src="screenshots/dashboard-light.png" width="400" alt="Web dashboard, light">
 </div>
 
 ## Install
@@ -146,7 +162,8 @@ only whether the agent is up and how many viewers it has.
 
 ```
 agent/vitals.py       the whole agent: readers, collector, HTTP, SSE
-agent/dashboard.html  the whole UI: no build step, no framework, no CDN
+agent/dashboard.html  the web UI: no build step, no framework, no CDN
+ios/                  native SwiftUI client
 deploy/               systemd units and the sudoers rule
 ```
 
